@@ -12,6 +12,23 @@ type leftShift28(const type& value, size_t shift) {
     return result;
 }
 
+type combineHalves28(const type& C, const type& D)
+{
+    type result(7, 0);
+
+    for (size_t i = 0; i < 28; i++) {
+        bool bit = getBit(C, i + 1, BitIndexing::MSB_1);
+        setBit(result, i + 1, bit, BitIndexing::MSB_1);
+    }
+
+    for (size_t i = 0; i < 28; i++) {
+        bool bit = getBit(D, i + 1, BitIndexing::MSB_1);
+        setBit(result, i + 29, bit, BitIndexing::MSB_1);
+    }
+
+    return result;
+}
+
 std::vector<type> DESKeyExpansion::generateRoundKeys(const type& key)
 {
     if (key.size() != 8) {
@@ -29,8 +46,7 @@ std::vector<type> DESKeyExpansion::generateRoundKeys(const type& key)
         type new_D = leftShift28(D, DESConstants::SHIFT[round]);
         C = new_C;
         D = new_D;
-        type temp = new_C;
-        temp.insert(temp.end(), new_D.begin(), new_D.end());
+        type temp = combineHalves28(new_C, new_D);
         type newKey = permuteBits(temp, DESConstants::PC2, BitIndexing::MSB_1);
         K_rounds.push_back(newKey);
     }

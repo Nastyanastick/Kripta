@@ -10,6 +10,7 @@ size_t byteIndex (size_t index, BitIndexing bitindexing){
         index --;
         return index / 8;
     }
+    throw Error::ERROR_SYNTAX;
 }
 
 size_t bitIndex (size_t index, BitIndexing bitindexing){
@@ -22,6 +23,7 @@ size_t bitIndex (size_t index, BitIndexing bitindexing){
         index --;
         return index % 8;
     }
+    throw Error::ERROR_SYNTAX;
 }
 
 bool getBit(
@@ -103,7 +105,7 @@ type permuteBits(
     const std::vector<size_t>& P_block,
     BitIndexing bitindexing
 ){
-    size_t resultSize = P_block.size() / 8;
+    size_t resultSize = (P_block.size() + 7) / 8;
     type result(resultSize);
     for (size_t i = 0; i < P_block.size(); i++) {
         if ((bitindexing == BitIndexing::MSB_0 ||

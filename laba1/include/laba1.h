@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <cstdint>
 
@@ -9,6 +11,7 @@ enum struct Error {
     ERROR_SET_BIT,
     ERROR_INDEX_PBLOCK,
     ERROR_BLOCK_SIZE,
+    ERROR_SYNTAX,
 };
 
 enum struct BitIndexing {

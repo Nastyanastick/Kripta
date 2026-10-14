@@ -6,6 +6,7 @@
 #include "laba1.h"
 #include "CryptoContext.h"
 #include "Feistel.h"
+#include "Point5Demo.h"
 
 // ==================== ВРЕМЕННЫЙ ТЕСТОВЫЙ CIPHER ====================
 
@@ -383,6 +384,8 @@ int main()
 
     std::cout << "Decrypted: ";
     printBytes(feistelDecrypted);
+
+    runPoint5Demo();
 
 
     return 0;

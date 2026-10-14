@@ -5,6 +5,7 @@
 #include <fstream>
 #include "include/CryptoContext.h"
 #include "laba1.h"
+#include <iostream>
 
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -859,7 +860,6 @@ std::future<void> CryptoContext::encrypt(
     return std::async(
         std::launch::async,
         [this, inputPath, outputPath]() {
-
             std::ifstream inputFile(
                 inputPath,
                 std::ios::binary
@@ -870,14 +870,13 @@ std::future<void> CryptoContext::encrypt(
             }
 
             type data(
-                (std::istreambuf_iterator<char>(inputFile)),    // читаем по байтам
+                (std::istreambuf_iterator<char>(inputFile)),
                 std::istreambuf_iterator<char>()
             );
 
             inputFile.close();
 
-            type encryptedData =
-                encrypt(data).get();
+            type encryptedData = encrypt(data).get();
 
             std::ofstream outputFile(
                 outputPath,
@@ -898,6 +897,7 @@ std::future<void> CryptoContext::encrypt(
     );
 }
 
+
 std::future<void> CryptoContext::decrypt(
     const std::string& inputPath,
     const std::string& outputPath
@@ -906,7 +906,6 @@ std::future<void> CryptoContext::decrypt(
     return std::async(
         std::launch::async,
         [this, inputPath, outputPath]() {
-
             std::ifstream inputFile(
                 inputPath,
                 std::ios::binary
@@ -923,8 +922,7 @@ std::future<void> CryptoContext::decrypt(
 
             inputFile.close();
 
-            type decryptedData =
-                decrypt(data).get();
+            type decryptedData = decrypt(data).get();
 
             std::ofstream outputFile(
                 outputPath,
