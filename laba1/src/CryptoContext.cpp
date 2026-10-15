@@ -824,6 +824,10 @@ std::future<type> CryptoContext::decrypt(
     return std::async(
         std::launch::async,
         [this, data]() {
+            size_t blockSize = cipher.getBlockSize();
+            if (blockSize == 0 || data.size() % blockSize != 0) {
+                throw Error::ERROR_BLOCK_SIZE;
+            }
             switch (cipherMode) {
                 case CipherMode::ECB:
                     return decryptECB(data);
