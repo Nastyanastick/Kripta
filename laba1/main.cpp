@@ -7,6 +7,7 @@
 #include "CryptoContext.h"
 #include "Feistel.h"
 #include "Point5Demo.h"
+#include "Point7Demo.h"
 
 // ==================== ВРЕМЕННЫЙ ТЕСТОВЫЙ CIPHER ====================
 
@@ -386,7 +387,7 @@ int main()
     printBytes(feistelDecrypted);
 
     runPoint5Demo();
-
+    runPoint7Demo();
 
     return 0;
 }
