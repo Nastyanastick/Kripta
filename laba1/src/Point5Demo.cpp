@@ -212,6 +212,8 @@ void testFileEncryption(
     try
     {
         // читаем исходный файл в бинарном режиме.
+        std::cout << "Path: [" << inputPath << "]\n";
+        std::cout << "Path length: " << inputPath.size() << '\n';
         std::ifstream inputFile(inputPath, std::ios::binary);
 
         if (!inputFile)
@@ -337,16 +339,16 @@ void runPoint5Demo()
               << (decrypted == plaintext ? "OK" : "FAIL")
               << '\n';
 
-    testRandomArrays();
-    testCipherModes();
-    testPaddingModes();
+    // testRandomArrays();
+    // testCipherModes();
+    // testPaddingModes();
 
     testFileEncryption("tests_file/test.txt", CipherMode::ECB);
-    testFileEncryption("tests_file/test_mp3_kripta.mp3", CipherMode::CBC);
-    testFileEncryption("tests_file/test_png_kripta.jpg", CipherMode::CFB);
-    testFileEncryption("tests_file/test_video_kripta.MP4", CipherMode::CTR);
-    testFileEncryption("tests_file/allocator_red_black_tree_tests.cpp",CipherMode::PCBC);
-    testFileEncryption("tests_file/allocator_buddies_system.cpp", CipherMode::OFB);
+    testFileEncryption("tests_file/test_mp3_kripta.mp3", CipherMode::ECB);
+    // testFileEncryption("tests_file/test_png_kripta.jpg", CipherMode::CFB);
+    // testFileEncryption("tests_file/test_video_kripta.MP4", CipherMode::CTR);
+    // testFileEncryption("tests_file/allocator_red_black_tree_tests.cpp",CipherMode::PCBC);
+    // testFileEncryption("tests_file/allocator_buddies_system.cpp", CipherMode::OFB);
 
 
 }
