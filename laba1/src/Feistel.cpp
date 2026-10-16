@@ -1,4 +1,5 @@
 #include "Feistel.h"
+#include "laba1.h"
 #include <utility>
 
 Feistel::Feistel(
@@ -33,6 +34,9 @@ type Feistel::processBlock(
         if (decrypt) {
             keyIndex = roundKeys.size() - 1 - i;
             type f = roundTransform.transform(L, roundKeys[keyIndex]);
+            if (f.size() != L.size()) {
+                throw Error::ERROR_BLOCK_SIZE;
+            }
             type oldL = L;
             for (size_t j = 0; j < L.size(); j++) {
                 L[j] = R[j] ^ f[j];
@@ -42,6 +46,9 @@ type Feistel::processBlock(
         else {
             keyIndex = i;
             type f = roundTransform.transform(R, roundKeys[keyIndex]);
+            if (f.size() != R.size()) {
+                throw Error::ERROR_BLOCK_SIZE;
+            }
             type oldL = L;
             L = R;
             for (size_t j = 0; j < R.size(); j++) {

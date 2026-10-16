@@ -1,7 +1,9 @@
+
 #include <iostream>
 #include <vector>
 #include <cstdint>
 #include <bitset>
+#include <string>
 
 #include "laba1.h"
 #include "CryptoContext.h"
@@ -16,7 +18,7 @@ class TestCipher : public ISymmetricCipher
 public:
     void setKey(const type& key) override
     {
-        // Для теста ключ не используется
+        // Для теста ключ не используется.
     }
 
     size_t getBlockSize() const override
@@ -24,9 +26,7 @@ public:
         return 4;
     }
 
-    type encrypt(
-        const type& block
-    ) override
+    type encrypt(const type& block) override
     {
         type result = block;
 
@@ -37,11 +37,9 @@ public:
         return result;
     }
 
-    type decrypt(
-        const type& block
-    ) override
+    type decrypt(const type& block) override
     {
-        // XOR с 0xFF обратим сам себе
+        // XOR с 0xFF обратим сам себе.
         return encrypt(block);
     }
 };
@@ -51,17 +49,11 @@ public:
 class TestKeyExpansion : public IKeyExpansion
 {
 public:
-    std::vector<type> generateRoundKeys(
-        const type& key
-    ) override
+    std::vector<type> generateRoundKeys(const type& key) override
     {
-        return {
-            key,
-            key
-        };
+        return { key, key };
     }
 };
-
 
 class TestRoundTransform : public IRoundTransform
 {
@@ -81,7 +73,6 @@ public:
     }
 };
 
-
 // ==================== ВЫВОД МАССИВА ====================
 
 void printBytes(const type& data)
@@ -93,12 +84,62 @@ void printBytes(const type& data)
     std::cout << "\n";
 }
 
+void printTestResult(const std::string& name, bool success)
+{
+    std::cout << name << ": "
+              << (success ? "PASS" : "FAIL")
+              << "\n";
+}
+
+// Проверка шифрования и восстановления данных для одного режима.
+void testMode(
+    const std::string& name,
+    CryptoContext& context,
+    const type& data,
+    bool printDetails = true
+)
+{
+    type encrypted = context.encrypt(data).get();
+    type decrypted = context.decrypt(encrypted).get();
+
+    bool success = (decrypted == data);
+
+    printTestResult(name, success);
+
+    if (printDetails) {
+        std::cout << "Original size:  " << data.size() << " bytes\n";
+        std::cout << "Encrypted size: " << encrypted.size() << " bytes\n";
+        std::cout << "Decrypted size: " << decrypted.size() << " bytes\n";
+
+        std::cout << "Original:  ";
+        printBytes(data);
+
+        std::cout << "Encrypted: ";
+        printBytes(encrypted);
+
+        std::cout << "Decrypted: ";
+        printBytes(decrypted);
+    }
+}
+
+// ==================== MAIN ====================
 
 int main()
 {
-    // ==================== ПУНКТ 1 ====================
+    size_t passed = 0;
+    size_t failed = 0;
 
-    type value = {0b10110010};
+    auto recordResult = [&](bool success) {
+        if (success) {
+            ++passed;
+        } else {
+            ++failed;
+        }
+    };
+
+    // ==================== POINT 1 ====================
+
+    type value = { 0b10110010 };
 
     std::vector<size_t> pBlock0 = {
         7, 6, 5, 4, 3, 2, 1, 0
@@ -114,255 +155,122 @@ int main()
     printBytes(value);
 
     std::cout << "MSB_0:   ";
-    printBytes(
-        permuteBits(value, pBlock0, BitIndexing::MSB_0)
-    );
+    printBytes(permuteBits(value, pBlock0, BitIndexing::MSB_0));
 
     std::cout << "MSB_1:   ";
-    printBytes(
-        permuteBits(value, pBlock1, BitIndexing::MSB_1)
-    );
+    printBytes(permuteBits(value, pBlock1, BitIndexing::MSB_1));
 
     std::cout << "LSB_0:   ";
-    printBytes(
-        permuteBits(value, pBlock0, BitIndexing::LSB_0)
-    );
+    printBytes(permuteBits(value, pBlock0, BitIndexing::LSB_0));
 
     std::cout << "LSB_1:   ";
-    printBytes(
-        permuteBits(value, pBlock1, BitIndexing::LSB_1)
-    );
+    printBytes(permuteBits(value, pBlock1, BitIndexing::LSB_1));
 
-
-    // ==================== ПУНКТ 2.4 ====================
+    // ==================== POINT 2.4 ====================
 
     std::cout << "\n========== POINT 2.4 ==========\n";
 
     TestCipher cipher;
 
-    type key = {
-        1, 2, 3, 4
-    };
-
-    type data = {
-        10, 20, 30, 40, 50, 60
-    };
-
-    type iv = {
-        0, 0, 0, 0
-    };
-
-
-    // ---------- ECB + PKCS7 ----------
-
-    std::cout << "\nECB + PKCS7\n";
+    type key = { 1, 2, 3, 4 };
+    type data = { 10, 20, 30, 40, 50, 60 };
+    type iv = { 0, 0, 0, 0 };
+    type randomDeltaIV = { 0, 0, 0, 1 };
 
     CryptoContext ecbContext(
-        cipher,
-        key,
-        CipherMode::ECB,
-        PaddingMode::PKCS7
+        cipher, key, CipherMode::ECB, PaddingMode::PKCS7
     );
-
-    type encryptedECB =
-        ecbContext.encrypt(data).get();
-
-    type decryptedECB =
-        ecbContext.decrypt(encryptedECB).get();
-
-    std::cout << "Original:  ";
-    printBytes(data);
-
-    std::cout << "Encrypted: ";
-    printBytes(encryptedECB);
-
-    std::cout << "Decrypted: ";
-    printBytes(decryptedECB);
-
-
-    // ---------- CBC + PKCS7 ----------
-
-    std::cout << "\nCBC + PKCS7\n";
 
     CryptoContext cbcContext(
-        cipher,
-        key,
-        CipherMode::CBC,
-        PaddingMode::PKCS7,
-        iv
+        cipher, key, CipherMode::CBC, PaddingMode::PKCS7, iv
     );
-
-    type encryptedCBC =
-        cbcContext.encrypt(data).get();
-
-    type decryptedCBC =
-        cbcContext.decrypt(encryptedCBC).get();
-
-    std::cout << "Original:  ";
-    printBytes(data);
-
-    std::cout << "Encrypted: ";
-    printBytes(encryptedCBC);
-
-    std::cout << "Decrypted: ";
-    printBytes(decryptedCBC);
-    
-
-    // ---------- PCBC + PKCS7 ----------
-
-    std::cout << "\nPCBC + PKCS7\n";
 
     CryptoContext pcbcContext(
-        cipher,
-        key,
-        CipherMode::PCBC,
-        PaddingMode::PKCS7,
-        iv
+        cipher, key, CipherMode::PCBC, PaddingMode::PKCS7, iv
     );
-
-    type encryptedPCBC =
-        pcbcContext.encrypt(data).get();
-
-    type decryptedPCBC =
-        pcbcContext.decrypt(encryptedPCBC).get();
-
-    std::cout << "Original:  ";
-    printBytes(data);
-
-    std::cout << "Encrypted: ";
-    printBytes(encryptedPCBC);
-
-    std::cout << "Decrypted: ";
-    printBytes(decryptedPCBC);
-
-
-    // ---------- CFB + PKCS7 ----------
-
-    std::cout << "\nCFB + PKCS7\n";
 
     CryptoContext cfbContext(
-        cipher,
-        key,
-        CipherMode::CFB,
-        PaddingMode::PKCS7,
-        iv
+        cipher, key, CipherMode::CFB, PaddingMode::PKCS7, iv
     );
-
-    type encryptedCFB =
-        cfbContext.encrypt(data).get();
-
-    type decryptedCFB =
-        cfbContext.decrypt(encryptedCFB).get();
-
-    std::cout << "Original:  ";
-    printBytes(data);
-
-    std::cout << "Encrypted: ";
-    printBytes(encryptedCFB);
-
-    std::cout << "Decrypted: ";
-    printBytes(decryptedCFB);
-
-
-    // ---------- OFB + PKCS7 ----------
-
-    std::cout << "\nOFB + PKCS7\n";
 
     CryptoContext ofbContext(
-        cipher,
-        key,
-        CipherMode::OFB,
-        PaddingMode::PKCS7,
-        iv
+        cipher, key, CipherMode::OFB, PaddingMode::PKCS7, iv
     );
-
-    type encryptedOFB =
-        ofbContext.encrypt(data).get();
-
-    type decryptedOFB =
-        ofbContext.decrypt(encryptedOFB).get();
-
-    std::cout << "Original:  ";
-    printBytes(data);
-
-    std::cout << "Encrypted: ";
-    printBytes(encryptedOFB);
-
-    std::cout << "Decrypted: ";
-    printBytes(decryptedOFB);
-
-
-    // ---------- CTR + PKCS7 ----------
-
-    std::cout << "\nCTR + PKCS7\n";
 
     CryptoContext ctrContext(
-        cipher,
-        key,
-        CipherMode::CTR,
-        PaddingMode::PKCS7,
-        iv
+        cipher, key, CipherMode::CTR, PaddingMode::PKCS7, iv
     );
-
-    type encryptedCTR =
-        ctrContext.encrypt(data).get();
-
-    type decryptedCTR =
-        ctrContext.decrypt(encryptedCTR).get();
-
-    std::cout << "Original:  ";
-    printBytes(data);
-
-    std::cout << "Encrypted: ";
-    printBytes(encryptedCTR);
-
-    std::cout << "Decrypted: ";
-    printBytes(decryptedCTR);
-
-    type randomDeltaIV = {0, 0, 0, 1};
 
     CryptoContext randomDeltaContext(
-        cipher,
-        key,
-        CipherMode::RANDOM_DELTA,
-        PaddingMode::PKCS7,
-        randomDeltaIV
+        cipher, key, CipherMode::RANDOM_DELTA,
+        PaddingMode::PKCS7, randomDeltaIV
     );
 
-    auto randomDeltaEncrypted = randomDeltaContext.encrypt(data).get();
-    auto randomDeltaDecrypted = randomDeltaContext.decrypt(randomDeltaEncrypted).get();
+    std::cout << "\n--- Small data tests ---\n";
 
-    std::cout << "Random Delta encrypted: ";
-    for (uint8_t byte : randomDeltaEncrypted) {
-        std::cout << std::hex << static_cast<int>(byte) << " ";
-    }
-    std::cout << std::dec << "\n";
+    auto runSmallTest = [&](const std::string& name, CryptoContext& context) {
+        type encrypted = context.encrypt(data).get();
+        type decrypted = context.decrypt(encrypted).get();
 
-    std::cout << "Random Delta decrypted: ";
-    for (uint8_t byte : randomDeltaDecrypted) {
-        std::cout << std::hex << static_cast<int>(byte) << " ";
-    }
-    std::cout << std::dec << "\n";
+        bool success = (decrypted == data);
+        printTestResult(name, success);
+        recordResult(success);
 
-    std::cout << "Random Delta restored: "
-            << (randomDeltaDecrypted == data ? "YES" : "NO")
-            << "\n";
+        std::cout << "Original:  ";
+        printBytes(data);
 
-    // ==================== ПУНКТ 3 ====================
+        std::cout << "Encrypted: ";
+        printBytes(encrypted);
+
+        std::cout << "Decrypted: ";
+        printBytes(decrypted);
+    };
+
+    runSmallTest("ECB + PKCS7", ecbContext);
+    runSmallTest("CBC + PKCS7", cbcContext);
+    runSmallTest("PCBC + PKCS7", pcbcContext);
+    runSmallTest("CFB + PKCS7", cfbContext);
+    runSmallTest("OFB + PKCS7", ofbContext);
+    runSmallTest("CTR + PKCS7", ctrContext);
+    runSmallTest("Random Delta + PKCS7", randomDeltaContext);
+
+    // ==================== БОЛЬШИЕ ДАННЫЕ ====================
+
+    std::cout << "\n========== PARALLEL PROCESSING TESTS ==========\n";
+
+    // 5000 блоков по 4 байта.
+    // PKCS7 добавит ещё один блок: всего 5001.
+    type largeData(4 * 5000, 0x42);
+
+    auto runLargeTest = [&](const std::string& name, CryptoContext& context) {
+        type encrypted = context.encrypt(largeData).get();
+        type decrypted = context.decrypt(encrypted).get();
+
+        bool success = (decrypted == largeData);
+        printTestResult(name, success);
+        recordResult(success);
+
+        std::cout << "Original size:  " << largeData.size() << " bytes\n";
+        std::cout << "Encrypted size: " << encrypted.size() << " bytes\n";
+        std::cout << "Decrypted size: " << decrypted.size() << " bytes\n";
+    };
+
+    runLargeTest("ECB large data", ecbContext);
+    runLargeTest("CBC large data", cbcContext);
+    runLargeTest("CFB large data", cfbContext);
+    runLargeTest("CTR large data", ctrContext);
+    runLargeTest("Random Delta large data", randomDeltaContext);
+
+    // ==================== POINT 3 ====================
 
     std::cout << "\n========== POINT 3 ==========\n";
 
     TestKeyExpansion keyExpansion;
     TestRoundTransform roundTransform;
 
-    Feistel feistel(
-        keyExpansion,
-        roundTransform
-    );
+    Feistel feistel(keyExpansion, roundTransform);
 
-    type feistelKey = {
-        1, 2, 3, 4
-    };
+    type feistelKey = { 1, 2, 3, 4 };
 
     type feistelData = {
         10, 20, 30, 40,
@@ -371,11 +279,8 @@ int main()
 
     feistel.setKey(feistelKey);
 
-    type feistelEncrypted =
-        feistel.encrypt(feistelData);
-
-    type feistelDecrypted =
-        feistel.decrypt(feistelEncrypted);
+    type feistelEncrypted = feistel.encrypt(feistelData);
+    type feistelDecrypted = feistel.decrypt(feistelEncrypted);
 
     std::cout << "Original:  ";
     printBytes(feistelData);
@@ -386,8 +291,27 @@ int main()
     std::cout << "Decrypted: ";
     printBytes(feistelDecrypted);
 
-    runPoint5Demo();
-    runPoint7Demo();
+    bool feistelSuccess = (feistelDecrypted == feistelData);
+    printTestResult("Feistel restored", feistelSuccess);
+    recordResult(feistelSuccess);
+
+    // ==================== SUMMARY ====================
+
+    std::cout << "\n========== SUMMARY ==========\n";
+    std::cout << "Passed: " << passed << "\n";
+    std::cout << "Failed: " << failed << "\n";
+
+    if (failed != 0) {
+        std::cout << "Some tests FAILED.\n";
+        return 1;
+    }
+
+    std::cout << "All registered tests PASSED.\n";
+
+    // Демонстрации пунктов 5 и 7 запускаются отдельно,
+    // потому что это демонстрационные функции, а не проверки выше.
+    // runPoint5Demo();
+    // runPoint7Demo();
 
     return 0;
 }

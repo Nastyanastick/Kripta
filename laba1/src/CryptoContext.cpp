@@ -218,7 +218,7 @@ type processParallelBlocks(
 
     constexpr size_t blocksPerTask = 4096;
 
-    // Небольшие данные обрабатываем без дополнительных задач.
+    // небольшие данные обрабатываем без дополнительных задач.
     if (totalBlocks <= blocksPerTask) {
         for (size_t i = 0; i < totalBlocks; ++i) {
             type block(
@@ -238,35 +238,20 @@ type processParallelBlocks(
         return result;
     }
 
-    // Ограничиваем число одновременно работающих задач.
-    const size_t hardwareThreads =
-        std::thread::hardware_concurrency();
+    // ограничиваем число одновременно работающих задач.
+    const size_t hardwareThreads = std::thread::hardware_concurrency();
 
     const size_t workers = hardwareThreads == 0
         ? 2
         : std::min<size_t>(hardwareThreads, 4);
 
-    for (
-        size_t batchStart = 0;
-        batchStart < totalBlocks;
-        batchStart += workers * blocksPerTask
-    ) {
+    for (size_t batchStart = 0; batchStart < totalBlocks; batchStart += workers * blocksPerTask) {
         std::vector<std::future<type>> futures;
 
-        const size_t batchEnd = std::min(
-            totalBlocks,
-            batchStart + workers * blocksPerTask
-        );
+        const size_t batchEnd = std::min(totalBlocks, batchStart + workers * blocksPerTask);
 
-        for (
-            size_t start = batchStart;
-            start < batchEnd;
-            start += blocksPerTask
-        ) {
-            const size_t end = std::min(
-                batchEnd,
-                start + blocksPerTask
-            );
+        for (size_t start = batchStart; start < batchEnd; start += blocksPerTask) {
+            const size_t end = std::min(batchEnd, start + blocksPerTask);
 
             futures.push_back(std::async(
                 std::launch::async,
@@ -311,13 +296,11 @@ type processParallelBlocks(
 type makeCounter(const type& iv, size_t blockIndex)
 {
     type counter = iv;
-    size_t carry = blockIndex;
+    size_t carry = blockIndex; // на сколько увеличиваем счетчик
 
-    for (int j = static_cast<int>(counter.size()) - 1;
-         j >= 0 && carry > 0;
-         --j) {
+    for (int j = static_cast<int>(counter.size()) - 1; j >= 0 && carry > 0; --j) {
         size_t sum = counter[j] + (carry & 0xFF);
-        counter[j] = static_cast<uint8_t>(sum & 0xFF);
+        counter[j] = static_cast<uint8_t>(sum & 0xFF); // оставляем млашие 8 бит
         carry = (carry >> 8) + (sum >> 8);
     }
 
@@ -392,29 +375,32 @@ type CryptoContext::decryptCBC(
     const type& data
 )
 {
-    type result;
-
     size_t blockSize = cipher.getBlockSize();
-    type previousBlock = iv;
 
-    for (size_t i = 0; i < data.size(); i += blockSize) {
-        type block(
-            data.begin() + i,
-            data.begin() + i + blockSize
-        );
-
-        type decryptedBlock = cipher.decrypt(block);
-
-        decryptedBlock = xorBlocks(decryptedBlock, previousBlock);
-
-        result.insert(
-            result.end(),
-            decryptedBlock.begin(),
-            decryptedBlock.end()
-        );
-
-        previousBlock = block;
+    if (blockSize == 0 || data.size() % blockSize != 0) {
+        throw Error::ERROR_BLOCK_SIZE;
     }
+
+    type result = processParallelBlocks(
+        data,
+        blockSize,
+        [this, &data, blockSize](const type& block, size_t index) {
+            type decryptedBlock = cipher.decrypt(block);
+            type previousBlock;
+
+            if (index == 0) {
+                previousBlock = iv;
+            }
+            else {
+                size_t previousOffset = (index - 1) * blockSize; // начало предыдущего блока в массиве
+
+                previousBlock = type(data.begin() + previousOffset, data.begin() + previousOffset + blockSize);
+            }
+
+            return xorBlocks(decryptedBlock, previousBlock);
+        }
+    );
+
     return removePadding(result);
 }
 
@@ -532,31 +518,33 @@ type CryptoContext::decryptCFB(
     const type& data
 )
 {
-    type result;
-
     size_t blockSize = cipher.getBlockSize();
-    type previousBlock = iv;
 
-    for (size_t i = 0; i < data.size(); i += blockSize) {
-        type block(
-            data.begin() + i,
-            data.begin() + i + blockSize
-        );
-
-        type encryptedPreviousBlock =
-            cipher.encrypt(previousBlock);
-
-        type decryptedBlock =
-            xorBlocks(block, encryptedPreviousBlock);
-
-        result.insert(
-            result.end(),
-            decryptedBlock.begin(),
-            decryptedBlock.end()
-        );
-
-        previousBlock = block;
+    if (blockSize == 0 || data.size() % blockSize != 0) {
+        throw Error::ERROR_BLOCK_SIZE;
     }
+
+    type result = processParallelBlocks(
+        data,
+        blockSize,
+        [this, &data, blockSize](const type& block, size_t index) {
+            type previousBlock;
+
+            if (index == 0) {
+                previousBlock = iv;
+            }
+            else {
+                size_t previousOffset = (index - 1) * blockSize;
+
+                previousBlock = type(data.begin() + previousOffset, data.begin() + previousOffset + blockSize);
+            }
+
+            type encryptedPreviousBlock = cipher.encrypt(previousBlock);
+
+            return xorBlocks(block, encryptedPreviousBlock);
+        }
+    );
+
     return removePadding(result);
 }
 
@@ -652,8 +640,7 @@ type CryptoContext::decryptCTR(const type& data)
     return removePadding(result);
 }
 
-type CryptoContext::encryptRandomDelta(
-    const type& data)
+type CryptoContext::encryptRandomDelta(const type& data)
 {
     size_t blockSize = cipher.getBlockSize();
 
@@ -667,64 +654,33 @@ type CryptoContext::encryptRandomDelta(
 
     type paddedData = addPadding(data);
 
-    size_t halfSize = blockSize / 2; // размер половины блока
+    size_t halfSize = blockSize / 2;
 
-    type counterIV(
-        iv.begin(),
-        iv.begin() + halfSize
-    );
+    type counterIV(iv.begin(), iv.begin() + halfSize);
 
-    type delta(
-        iv.begin() + halfSize,
-        iv.end()
-    );
+    type delta(iv.begin() + halfSize, iv.end());
 
     if (delta.back() % 2 == 0) {
         throw Error::ERROR_BLOCK_SIZE;
     }
 
-    type result;
-    std::vector<std::future<type>> futures;
+    return processParallelBlocks(
+        paddedData,
+        blockSize,
+        [this, counterIV, delta](const type& block, size_t index) {
+            type countI = addVectors(counterIV, multiplyVector(delta, index));
 
-    for (size_t i = 0; i < paddedData.size(); i += blockSize) {
-        type countI = addVectors(counterIV, multiplyVector(delta, i / blockSize));
+            type tag = countI;
+            tag.insert(tag.end(), delta.begin(), delta.end());
 
-        type tag = countI;
-        tag.insert(tag.end(), delta.begin(), delta.end());
+            type gamma = cipher.encrypt(tag);
 
-        futures.push_back(
-            std::async(
-                std::launch::async,
-                [this, tag]() {
-                    return cipher.encrypt(tag);
-                }
-            )
-        );
-    }
-
-    for (size_t i = 0; i < paddedData.size(); i += blockSize) {
-
-        type block(
-            paddedData.begin() + i,
-            paddedData.begin() + i + blockSize
-        );
-
-        type gamma = futures[i / blockSize].get();
-
-        type encryptedBlock = xorBlocks(block, gamma);
-
-        result.insert(
-            result.end(),
-            encryptedBlock.begin(),
-            encryptedBlock.end()
-        );
-    }
-
-    return result;
+            return xorBlocks(block, gamma);
+        }
+    );
 }
 
-type CryptoContext::decryptRandomDelta(
-    const type& data)
+type CryptoContext::decryptRandomDelta(const type& data)
 {
     size_t blockSize = cipher.getBlockSize();
 
@@ -742,65 +698,32 @@ type CryptoContext::decryptRandomDelta(
 
     size_t halfSize = blockSize / 2;
 
-    type counterIV(
-        iv.begin(),
-        iv.begin() + halfSize
-    );
+    type counterIV(iv.begin(), iv.begin() + halfSize);
 
-    type delta(
-        iv.begin() + halfSize,
-        iv.end()
-    );
+    type delta(iv.begin() + halfSize, iv.end());
 
     if (delta.back() % 2 == 0) {
         throw Error::ERROR_BLOCK_SIZE;
     }
 
-    type result;
-    std::vector<std::future<type>> futures;
+    type result = processParallelBlocks(
+        data,
+        blockSize,
+        [this, counterIV, delta](const type& block, size_t index) {
+            type countI = addVectors(counterIV, multiplyVector(delta, index));
 
-    for (size_t i = 0; i < data.size(); i += blockSize) {
+            type tag = countI;
+            tag.insert(tag.end(), delta.begin(), delta.end());
 
-        size_t blockIndex = i / blockSize;
-        type countI =
-            addVectors(counterIV, multiplyVector(delta, blockIndex));
+            type gamma = cipher.encrypt(tag);
 
-        type tag = countI;
-        tag.insert(tag.end(), delta.begin(), delta.end());
-
-        futures.push_back(
-            std::async(
-                std::launch::async,
-                [this, tag]() {
-                    return cipher.encrypt(tag);
-                }
-            )
-        );
-    }
-
-    for (size_t i = 0; i < data.size(); i += blockSize) {
-
-        size_t blockIndex = i / blockSize;
-
-        type block(
-            data.begin() + i,
-            data.begin() + i + blockSize
-        );
-
-        type gamma = futures[blockIndex].get();
-
-        type decryptedBlock =
-            xorBlocks(block, gamma);
-
-        result.insert(
-            result.end(),
-            decryptedBlock.begin(),
-            decryptedBlock.end()
-        );
-    }
+            return xorBlocks(block, gamma);
+        }
+    );
 
     return removePadding(result);
 }
+
 
 std::future<type> CryptoContext::encrypt(
     const type& data
