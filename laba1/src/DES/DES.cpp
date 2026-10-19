@@ -27,7 +27,7 @@ type DES::encrypt(const type& block)
     type permutedBlock = permuteBits(block, DESConstants::IP, BitIndexing::MSB_1);
     type encryptedBlock = feistel.encrypt(permutedBlock);
 
-    std::swap_ranges(
+    std::swap_ranges( // конечная перестановка предусматривает не LR, а RL. начало первого, конец первого начало второго
         encryptedBlock.begin(),
         encryptedBlock.begin() + 4,
         encryptedBlock.begin() + 4

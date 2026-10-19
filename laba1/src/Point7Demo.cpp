@@ -401,8 +401,10 @@ void runPoint7Demo()
     testPaddingModes7();
 
     testFileEncryption7("tests_file/test.txt", CipherMode::ECB);
-    testFileEncryption7("tests_file/test_png_kripta.jpg", CipherMode::CFB);
-    // testFileEncryption7("tests_file/test_video_kripta.MP4", CipherMode::CTR);
-    testFileEncryption7("tests_file/allocator_red_black_tree_tests.cpp", CipherMode::PCBC);
-    // testFileEncryption7("tests_file/test_mp3_kripta.mp3", CipherMode::OFB);
+    testFileEncryption7("tests_file/test_png_kripta.jpg", CipherMode::CBC);
+    testFileEncryption7("tests_file/allocator_red_black_tree_tests.cpp",CipherMode::PCBC);
+    testFileEncryption7("tests_file/test_mp3_kripta2.mp3", CipherMode::CFB);
+    testFileEncryption7("tests_file/allocator_buddies_system.cpp", CipherMode::OFB);
+    testFileEncryption7("tests_file/allocator_buddies_system.cpp", CipherMode::CFB);
+    testFileEncryption7("tests_file/test_video_kripta2.MP4", CipherMode::CTR);
 }

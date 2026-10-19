@@ -28,9 +28,7 @@ std::vector<type> DEALKeyExpansion::generateRoundKeys(
     const type& key
 )
 {
-    if (key.size() != 16 &&
-        key.size() != 24 &&
-        key.size() != 32) {
+    if (key.size() != 16 && key.size() != 24 && key.size() != 32) {
         throw Error::ERROR_BLOCK_SIZE;
     }
 
@@ -50,10 +48,7 @@ std::vector<type> DEALKeyExpansion::generateRoundKeys(
     keyBlocks.reserve(keyParts);
 
     for (size_t i = 0; i < keyParts; ++i) {
-        keyBlocks.emplace_back(
-            key.begin() + i * 8,
-            key.begin() + (i + 1) * 8
-        );
+        keyBlocks.emplace_back(key.begin() + i * 8, key.begin() + (i + 1) * 8);
     }
 
     std::vector<type> roundKeys;
@@ -73,7 +68,6 @@ std::vector<type> DEALKeyExpansion::generateRoundKeys(
 
             xorConstant(input, constant);
         }
-
         previous = des.encrypt(input);
         roundKeys.push_back(previous);
     }

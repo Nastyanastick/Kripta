@@ -26,12 +26,6 @@ type DEAL::encrypt(const type& block)
 
     type swapped = block;
 
-    std::swap_ranges(
-        swapped.begin(),
-        swapped.begin() + 8,
-        swapped.begin() + 8
-    );
-
     return feistel.encrypt(swapped);
 }
 
@@ -42,12 +36,6 @@ type DEAL::decrypt(const type& block)
     }
 
     type result = feistel.decrypt(block);
-
-    std::swap_ranges(
-        result.begin(),
-        result.begin() + 8,
-        result.begin() + 8
-    );
 
     return result;
 }
