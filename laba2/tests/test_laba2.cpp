@@ -1,0 +1,596 @@
+#include "../include/algorithms/EuclideanGcd.h"
+#include "../include/algorithms/ExtendedEuclideanGcd.h"
+#include "../include/algorithms/JacobiSymbol.h"
+#include "../include/algorithms/LegendreSymbol.h"
+#include "../include/laba2.h"
+#include "../include/algorithms/BinaryEuclideanGcd.h"
+#include "../include/algorithms/ModularExponentiation.h"
+#include "../include/algorithms/EulerFunction.h"
+#include "../include/algorithms/CarmichaelFunction.h"
+#include "../include/NumberTheoryService.h"
+
+#include <iostream>
+#include <string>
+
+int passed = 0;
+int failed = 0;
+
+void check(const std::string& name, bool result) {
+    if (result) {
+        std::cout << "[PASS] " << name << '\n';
+        ++passed;
+    }
+    else {
+        std::cout << "[FAIL] " << name << '\n';
+        ++failed;
+    }
+}
+
+template <typename Function>
+void checkThrows(const std::string& name, Function function) {
+    try {
+        function();
+        check(name, false);
+    }
+    catch (Error error) {
+        check(name, true);
+    }
+    catch (...) {
+        check(name, false);
+    }
+}
+
+void testEuclideanGcd() {
+    check("GCD (48, 18)", EuclideanGcd::calculate(48, 18) == 6);
+    check("GCD (17, 5)", EuclideanGcd::calculate(17, 5) == 1);
+    check("GCD (-24, 18)", EuclideanGcd::calculate(-24, 18) == 6);
+    check("GCD (0, 7)", EuclideanGcd::calculate(0, 7) == 7);
+    check("GCD (0, 0)", EuclideanGcd::calculate(0, 0) == 0);
+    check("GCD (48, -18)", EuclideanGcd::calculate(48, -18) == 6);
+    check("GCD (-48, -18)", EuclideanGcd::calculate(-48, -18) == 6);
+
+    BigInteger a("123456789012345678901234567890");
+    BigInteger b("987654321098765432109876543210");
+
+    check("GCD BigInteger", EuclideanGcd::calculate(a, b) ==
+        BigInteger("9000000000900000000090"));
+
+    check("GCD BigInteger negative", EuclideanGcd::calculate(-a, b) ==
+        BigInteger("9000000000900000000090"));
+}
+
+void testExtendedEuclideanGcd() {
+    BezoutResult result;
+
+    result = ExtendedEuclideanGcd::calculate(30, 18);
+    check("Extended GCD (30, 18)", result.gcd == 6);
+    check("Bezout identity (30, 18)",
+        30 * result.x + 18 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(17, 5);
+    check("Extended GCD coprime", result.gcd == 1);
+    check("Bezout identity coprime",
+        17 * result.x + 5 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(48, 18);
+    check("Extended GCD (48, 18)", result.gcd == 6);
+    check("Bezout identity (48, 18)",
+        48 * result.x + 18 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(-30, 18);
+    check("Extended GCD negative a", result.gcd == 6);
+    check("Bezout identity negative a",
+        -30 * result.x + 18 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(30, -18);
+    check("Extended GCD negative b", result.gcd == 6);
+    check("Bezout identity negative b",
+        30 * result.x - 18 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(-30, -18);
+    check("Extended GCD both negative", result.gcd == 6);
+    check("Bezout identity both negative",
+        -30 * result.x - 18 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(0, 7);
+    check("Extended GCD (0, 7)", result.gcd == 7);
+    check("Bezout identity (0, 7)",
+        result.x * 0 + result.y * 7 == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(7, 0);
+    check("Extended GCD (7, 0)", result.gcd == 7);
+    check("Bezout identity (7, 0)",
+        result.x * 7 + result.y * 0 == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(0, -7);
+    check("Extended GCD (0, -7)", result.gcd == 7);
+    check("Bezout identity (0, -7)",
+        result.x * 0 - result.y * 7 == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(0, 0);
+    check("Extended GCD (0, 0)", result.gcd == 0);
+    check("Bezout identity (0, 0)",
+        result.x * 0 + result.y * 0 == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(12, 12);
+    check("Extended GCD equal numbers", result.gcd == 12);
+    check("Bezout identity equal numbers",
+        12 * result.x + 12 * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(1, 1);
+    check("Extended GCD (1, 1)", result.gcd == 1);
+    check("Bezout identity (1, 1)",
+        result.x + result.y == result.gcd);
+
+    BigInteger a("12345678901234567890");
+    BigInteger b("123456789012345678900");
+
+    result = ExtendedEuclideanGcd::calculate(a, b);
+    check("Extended GCD BigInteger", result.gcd == a);
+    check("Bezout identity BigInteger",
+        a * result.x + b * result.y == result.gcd);
+
+    result = ExtendedEuclideanGcd::calculate(-a, b);
+    check("Extended GCD BigInteger negative", result.gcd == a);
+    check("Bezout identity BigInteger negative",
+        -a * result.x + b * result.y == result.gcd);
+
+    check("Extended GCD nonnegative result",
+        result.gcd >= 0);
+}
+
+void testJacobiSymbol() {
+    check("Jacobi (3, 7)", JacobiSymbol::calculate(3, 7) == -1);
+    check("Jacobi (2, 7)", JacobiSymbol::calculate(2, 7) == 1);
+    check("Jacobi (0, 7)", JacobiSymbol::calculate(0, 7) == 0);
+    check("Jacobi (7, 9)", JacobiSymbol::calculate(7, 9) == 1);
+    check("Jacobi (2, 9)", JacobiSymbol::calculate(2, 9) == 1);
+    check("Jacobi (-1, 7)", JacobiSymbol::calculate(-1, 7) == -1);
+
+    checkThrows("Jacobi even denominator", [] {
+        JacobiSymbol::calculate(3, 8);
+    });
+
+    checkThrows("Jacobi denominator equals 1", [] {
+        JacobiSymbol::calculate(3, 1);
+    });
+
+    checkThrows("Jacobi zero denominator", [] {
+        JacobiSymbol::calculate(3, 0);
+    });
+
+    BigInteger a("123456789012345678901234567890");
+    BigInteger n("987654321098765432109876543211");
+
+    int result = JacobiSymbol::calculate(a, n);
+    check("Jacobi BigInteger result range", result >= -1 && result <= 1);
+}
+
+void testLegendreSymbol() {
+    check("Legendre (3, 7)", LegendreSymbol::calculate(3, 7) == -1);
+    check("Legendre (2, 7)", LegendreSymbol::calculate(2, 7) == 1);
+    check("Legendre (0, 7)", LegendreSymbol::calculate(0, 7) == 0);
+    check("Legendre (7, 7)", LegendreSymbol::calculate(7, 7) == 0);
+    check("Legendre (-1, 7)", LegendreSymbol::calculate(-1, 7) == -1);
+
+    checkThrows("Legendre composite denominator", [] {
+        LegendreSymbol::calculate(2, 9);
+    });
+
+    checkThrows("Legendre even denominator", [] {
+        LegendreSymbol::calculate(2, 8);
+    });
+
+    checkThrows("Legendre denominator equals 2", [] {
+        LegendreSymbol::calculate(1, 2);
+    });
+
+    BigInteger a("12345678901234567890");
+
+    int result = LegendreSymbol::calculate(a, 7);
+    check("Legendre BigInteger result range", result >= -1 && result <= 1);
+}
+
+void testBinaryEuclideanGcd() {
+    check("Binary GCD: gcd(48, 18) = 6",
+        BinaryEuclideanGcd::calculate(48, 18) == 6);
+
+    check("Binary GCD: gcd(7, 3) = 1",
+        BinaryEuclideanGcd::calculate(7, 3) == 1);
+
+    check("Binary GCD: gcd(0, 15) = 15",
+        BinaryEuclideanGcd::calculate(0, 15) == 15);
+
+    check("Binary GCD: gcd(15, 0) = 15",
+        BinaryEuclideanGcd::calculate(15, 0) == 15);
+
+    check("Binary GCD: gcd(0, 0) = 0",
+        BinaryEuclideanGcd::calculate(0, 0) == 0);
+
+    check("Binary GCD: negative a",
+        BinaryEuclideanGcd::calculate(-48, 18) == 6);
+
+    check("Binary GCD: negative b",
+        BinaryEuclideanGcd::calculate(48, -18) == 6);
+
+    check("Binary GCD: both negative",
+        BinaryEuclideanGcd::calculate(-48, -18) == 6);
+
+    check("Binary GCD: equal numbers",
+        BinaryEuclideanGcd::calculate(17, 17) == 17);
+
+    check("Binary GCD: powers of two",
+        BinaryEuclideanGcd::calculate(256, 64) == 64);
+
+    check("Binary GCD: coprime numbers",
+        BinaryEuclideanGcd::calculate(35, 64) == 1);
+
+    BigInteger a = BigInteger("12345678901234567890");
+    BigInteger b = BigInteger("9876543210");
+
+    check("Binary GCD: BigInteger",
+        BinaryEuclideanGcd::calculate(a, b) ==
+        EuclideanGcd::calculate(a, b));
+
+    check("Binary GCD: compare with Euclidean GCD",
+        BinaryEuclideanGcd::calculate(462, 1071) ==
+        EuclideanGcd::calculate(462, 1071));
+}
+
+void testModularExponentiation() {
+    check("Modular exponentiation: 3^4 mod 5 = 1",
+        ModularExponentiation::calculate(3, 4, 5) == 1);
+
+    check("Modular exponentiation: 3^13 mod 7 = 3",
+        ModularExponentiation::calculate(3, 13, 7) == 3);
+
+    check("Modular exponentiation: 2^10 mod 1000 = 24",
+        ModularExponentiation::calculate(2, 10, 1000) == 24);
+
+    check("Modular exponentiation: exponent zero",
+        ModularExponentiation::calculate(5, 0, 7) == 1);
+
+    check("Modular exponentiation: 0^0 mod 7 = 1",
+        ModularExponentiation::calculate(0, 0, 7) == 1);
+
+    check("Modular exponentiation: base zero",
+        ModularExponentiation::calculate(0, 5, 7) == 0);
+
+    check("Modular exponentiation: base one",
+        ModularExponentiation::calculate(1, 100, 7) == 1);
+
+    check("Modular exponentiation: exponent one",
+        ModularExponentiation::calculate(12, 1, 7) == 5);
+
+    check("Modular exponentiation: base greater than modulus",
+        ModularExponentiation::calculate(17, 3, 5) == 3);
+
+    check("Modular exponentiation: modulus one",
+        ModularExponentiation::calculate(123, 456, 1) == 0);
+
+    check("Modular exponentiation: negative base",
+        ModularExponentiation::calculate(-2, 3, 5) == 2);
+
+    check("Modular exponentiation: negative base even exponent",
+        ModularExponentiation::calculate(-2, 4, 5) == 1);
+
+    check("Modular exponentiation: negative base divisible by modulus",
+        ModularExponentiation::calculate(-15, 3, 5) == 0);
+
+    check("Modular exponentiation: large exponent",
+        ModularExponentiation::calculate(2, 100, 1009) == 164);
+
+    BigInteger base = BigInteger("12345678901234567890");
+    BigInteger exponent = BigInteger("12345");
+    BigInteger modulus = BigInteger("987654321");
+
+    check("Modular exponentiation: BigInteger arguments",
+        ModularExponentiation::calculate(base, exponent, modulus) >= 0 &&
+        ModularExponentiation::calculate(base, exponent, modulus) < modulus);
+
+    check("Modular exponentiation: negative exponent",
+    ModularExponentiation::calculate(2, -3, 5) == 2);
+
+    check("Modular exponentiation: negative base and exponent",
+        ModularExponentiation::calculate(-2, -1, 5) == 2);
+
+    checkThrows("Modular exponentiation: negative exponent without inverse",
+        [] { ModularExponentiation::calculate(2, -1, 4); });
+
+    check("Modular exponentiation: negative exponent with modulus one",
+        ModularExponentiation::calculate(0, -1, 1) == 0);
+
+    checkThrows("Modular exponentiation: zero modulus",
+        [] { ModularExponentiation::calculate(2, 3, 0); });
+
+    checkThrows("Modular exponentiation: negative modulus",
+        [] { ModularExponentiation::calculate(2, 3, -5); });
+}
+
+void testEulerFunction() {
+    // Метод по определению
+
+    check("Euler definition: phi(1) = 1",
+        EulerFunction::byDefinition(1) == 1);
+
+    check("Euler definition: phi(2) = 1",
+        EulerFunction::byDefinition(2) == 1);
+
+    check("Euler definition: phi(7) = 6",
+        EulerFunction::byDefinition(7) == 6);
+
+    check("Euler definition: phi(12) = 4",
+        EulerFunction::byDefinition(12) == 4);
+
+    check("Euler definition: phi(16) = 8",
+        EulerFunction::byDefinition(16) == 8);
+
+    check("Euler definition: phi(27) = 18",
+        EulerFunction::byDefinition(27) == 18);
+
+    check("Euler definition: phi(36) = 12",
+        EulerFunction::byDefinition(36) == 12);
+
+    check("Euler definition: phi(100) = 40",
+        EulerFunction::byDefinition(100) == 40);
+
+    checkThrows("Euler definition: n = 0",
+        [] { EulerFunction::byDefinition(0); });
+
+    checkThrows("Euler definition: negative n",
+        [] { EulerFunction::byDefinition(-5); });
+
+
+    // Метод разложения на простые множители
+
+    check("Euler factorization: phi(1) = 1",
+        EulerFunction::byPrimeFactorization(1) == 1);
+
+    check("Euler factorization: phi(2) = 1",
+        EulerFunction::byPrimeFactorization(2) == 1);
+
+    check("Euler factorization: phi(13) = 12",
+        EulerFunction::byPrimeFactorization(13) == 12);
+
+    check("Euler factorization: phi(16) = 8",
+        EulerFunction::byPrimeFactorization(16) == 8);
+
+    check("Euler factorization: phi(27) = 18",
+        EulerFunction::byPrimeFactorization(27) == 18);
+
+    check("Euler factorization: phi(36) = 12",
+        EulerFunction::byPrimeFactorization(36) == 12);
+
+    check("Euler factorization: phi(100) = 40",
+        EulerFunction::byPrimeFactorization(100) == 40);
+
+    check("Euler factorization: phi(97) = 96",
+        EulerFunction::byPrimeFactorization(97) == 96);
+
+    checkThrows("Euler factorization: n = 0",
+        [] { EulerFunction::byPrimeFactorization(0); });
+
+    checkThrows("Euler factorization: negative n",
+        [] { EulerFunction::byPrimeFactorization(-5); });
+
+
+    // Метод через формулу Фурье
+
+    check("Euler Fourier: phi(1) = 1",
+        EulerFunction::byFourierTransform(1) == 1);
+
+    check("Euler Fourier: phi(2) = 1",
+        EulerFunction::byFourierTransform(2) == 1);
+
+    check("Euler Fourier: phi(3) = 2",
+        EulerFunction::byFourierTransform(3) == 2);
+
+    check("Euler Fourier: phi(12) = 4",
+        EulerFunction::byFourierTransform(12) == 4);
+
+    check("Euler Fourier: phi(16) = 8",
+        EulerFunction::byFourierTransform(16) == 8);
+
+    check("Euler Fourier: phi(27) = 18",
+        EulerFunction::byFourierTransform(27) == 18);
+
+    check("Euler Fourier: phi(36) = 12",
+        EulerFunction::byFourierTransform(36) == 12);
+
+    checkThrows("Euler Fourier: n = 0",
+        [] { EulerFunction::byFourierTransform(0); });
+
+    checkThrows("Euler Fourier: negative n",
+        [] { EulerFunction::byFourierTransform(-5); });
+
+
+    // Сравнение всех трёх методов на небольших n
+
+    bool allEqual = true;
+
+    for (int n = 1; n <= 40; ++n) {
+        BigInteger byDefinition =
+            EulerFunction::byDefinition(n);
+
+        BigInteger byFactorization =
+            EulerFunction::byPrimeFactorization(n);
+
+        BigInteger byFourier =
+            EulerFunction::byFourierTransform(n);
+
+        if (byDefinition != byFactorization ||
+            byDefinition != byFourier) {
+            allEqual = false;
+            break;
+        }
+    }
+
+    check("Euler: all methods agree for n = 1..40",
+        allEqual);
+}
+
+void testCarmichaelFunction() {
+    std::cout << "\n--- Carmichael Function Tests ---\n";
+
+    // Граничные значения
+    check("Carmichael(1) = 1",
+          CarmichaelFunction::calculate(1) == 1);
+    check("Carmichael(2) = 1",
+          CarmichaelFunction::calculate(2) == 1);
+
+    // Некорректные аргументы
+    checkThrows("Carmichael(0) throws",
+                []() { CarmichaelFunction::calculate(0); });
+    checkThrows("Carmichael(-1) throws",
+                []() { CarmichaelFunction::calculate(-1); });
+    checkThrows("Carmichael(-100) throws",
+                []() { CarmichaelFunction::calculate(-100); });
+
+    // Степени двойки
+    check("Carmichael(4) = 2",
+          CarmichaelFunction::calculate(4) == 2);
+    check("Carmichael(8) = 2",
+          CarmichaelFunction::calculate(8) == 2);
+    check("Carmichael(16) = 4",
+          CarmichaelFunction::calculate(16) == 4);
+    check("Carmichael(32) = 8",
+          CarmichaelFunction::calculate(32) == 8);
+    check("Carmichael(64) = 16",
+          CarmichaelFunction::calculate(64) == 16);
+
+    // Нечётные простые числа
+    check("Carmichael(3) = 2",
+          CarmichaelFunction::calculate(3) == 2);
+    check("Carmichael(5) = 4",
+          CarmichaelFunction::calculate(5) == 4);
+    check("Carmichael(7) = 6",
+          CarmichaelFunction::calculate(7) == 6);
+    check("Carmichael(13) = 12",
+          CarmichaelFunction::calculate(13) == 12);
+    check("Carmichael(97) = 96",
+          CarmichaelFunction::calculate(97) == 96);
+
+    // Степени нечётных простых чисел
+    check("Carmichael(9) = 6",
+          CarmichaelFunction::calculate(9) == 6);
+    check("Carmichael(27) = 18",
+          CarmichaelFunction::calculate(27) == 18);
+    check("Carmichael(25) = 20",
+          CarmichaelFunction::calculate(25) == 20);
+    check("Carmichael(125) = 100",
+          CarmichaelFunction::calculate(125) == 100);
+
+    // Составные числа с разными простыми множителями
+    check("Carmichael(6) = 2",
+          CarmichaelFunction::calculate(6) == 2);
+    check("Carmichael(10) = 4",
+          CarmichaelFunction::calculate(10) == 4);
+    check("Carmichael(12) = 2",
+          CarmichaelFunction::calculate(12) == 2);
+    check("Carmichael(15) = 4",
+          CarmichaelFunction::calculate(15) == 4);
+    check("Carmichael(21) = 6",
+          CarmichaelFunction::calculate(21) == 6);
+    check("Carmichael(30) = 4",
+          CarmichaelFunction::calculate(30) == 4);
+    check("Carmichael(45) = 12",
+          CarmichaelFunction::calculate(45) == 12);
+    check("Carmichael(60) = 4",
+          CarmichaelFunction::calculate(60) == 4);
+    check("Carmichael(100) = 20",
+          CarmichaelFunction::calculate(100) == 20);
+
+    // Проверка оставшегося простого множителя после цикла
+    check("Carmichael(14) = 6",
+          CarmichaelFunction::calculate(14) == 6);
+    check("Carmichael(35) = 12",
+          CarmichaelFunction::calculate(35) == 12);
+    check("Carmichael(77) = 30",
+          CarmichaelFunction::calculate(77) == 30);
+
+    // Проверка большого простого числа
+    check("Carmichael(1000003) = 1000002",
+          CarmichaelFunction::calculate(BigInteger(1000003)) == 1000002);
+}
+
+void testNumberTheoryService() {
+    std::cout << "\n--- Number Theory Service Tests ---\n";
+
+    // Символ Лежандра
+    check("Service: Legendre symbol",
+        NumberTheoryService::legendreSymbol(3, 7) == -1);
+
+    // Символ Якоби
+    check("Service: Jacobi symbol",
+        NumberTheoryService::jacobiSymbol(3, 7) == -1);
+
+    // Алгоритм Евклида
+    check("Service: Euclidean GCD",
+        NumberTheoryService::gcd(48, 18) == 6);
+
+    // Расширенный алгоритм Евклида и соотношение Безу
+    BezoutResult result =
+        NumberTheoryService::extendedGcd(30, 18);
+
+    check("Service: Extended GCD",
+        result.gcd == 6);
+
+    check("Service: Bezout identity",
+        30 * result.x + 18 * result.y == result.gcd);
+
+    // Бинарный алгоритм Евклида
+    check("Service: Binary GCD",
+        NumberTheoryService::binaryGcd(48, 18) == 6);
+
+    // Возведение в степень по модулю
+    check("Service: Modular exponentiation",
+        NumberTheoryService::modularExponentiation(2, 10, 1000) == 24);
+
+    // Функция Эйлера: три способа
+    check("Service: Euler by definition",
+        NumberTheoryService::eulerByDefinition(12) == 4);
+
+    check("Service: Euler by prime factorization",
+        NumberTheoryService::eulerByPrimeFactorization(12) == 4);
+
+    check("Service: Euler by Fourier transform",
+        NumberTheoryService::eulerByFourierTransform(12) == 4);
+
+    // Функция Кармайкла
+    check("Service: Carmichael function",
+        NumberTheoryService::carmichael(12) == 2);
+
+    // Проверка обработки некорректных аргументов
+    checkThrows("Service: invalid Jacobi denominator",
+        [] {
+            NumberTheoryService::jacobiSymbol(3, 8);
+        });
+
+    checkThrows("Service: invalid Euler argument",
+        [] {
+            NumberTheoryService::eulerByDefinition(0);
+        });
+
+    checkThrows("Service: invalid Carmichael argument",
+        [] {
+            NumberTheoryService::carmichael(0);
+        });
+}
+
+int main() {
+    testEuclideanGcd();
+    testExtendedEuclideanGcd();
+    testJacobiSymbol();
+    testLegendreSymbol();
+    testBinaryEuclideanGcd();
+    testModularExponentiation();
+    testEulerFunction();
+    testCarmichaelFunction();
+
+    testNumberTheoryService();
+
+    std::cout << "\nPassed: " << passed << '\n';
+    std::cout << "Failed: " << failed << '\n';
+
+    return failed == 0 ? 0 : 1;
+}
