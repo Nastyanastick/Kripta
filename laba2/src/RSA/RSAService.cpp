@@ -101,7 +101,7 @@ RSAKeyPair RSAService::KeyGenerator::generateKeyPair()
 
         BigInteger difference = (p > q) ? p - q : q - p;
         BigInteger minimumDifference = BigInteger(1) << (bitLength - 16);
-        if (difference <= minimumDifference) {
+        if (difference < minimumDifference) {
             continue;
         }
         BigInteger n = p * q;
