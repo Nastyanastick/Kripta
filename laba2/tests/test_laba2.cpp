@@ -11,6 +11,7 @@
 #include "../include/primality/FermatPrimalityTest.h"
 #include "../include/primality/SolovayStrassenPrimalityTest.h"
 #include "../include/primality/MillerRabinPrimalityTest.h"
+#include "../include/rsa/RSAService.h"
 
 #include <iostream>
 #include <string>
@@ -662,6 +663,151 @@ void testProbabilisticPrimalityTests() {
               << "/20 runs (diagnostic only)\n";
 }
 
+void testRSAService() {
+    std::cout << "\n--- RSA Service Tests ---\n";
+    using TestType = RSAService::PrimalityTestType;
+
+    auto checkConstructs = [](const std::string& name, auto function) {
+        try {
+            function();
+            check(name, true);
+        }
+        catch (...) {
+            check(name, false);
+        }
+    };
+
+    // 1. Проверка конструкторов со всеми тестами простоты
+    checkConstructs("RSA: constructor with Fermat", [] {
+        RSAService rsa(TestType::Fermat, 0.999, 32);
+    });
+
+    checkConstructs("RSA: constructor with Solovay-Strassen", [] {
+        RSAService rsa(TestType::SolovayStrassen, 0.999, 32);
+    });
+
+    checkConstructs("RSA: constructor with Miller-Rabin", [] {
+        RSAService rsa(TestType::MillerRabin, 0.999, 32);
+    });
+
+    // 2. Проверка допустимой и недопустимой вероятности
+    checkConstructs("RSA: probability 0.5 is accepted", [] {
+        RSAService rsa(TestType::MillerRabin, 0.5, 32);
+    });
+
+    checkThrows("RSA: probability below 0.5 throws", [] {
+        RSAService rsa(TestType::MillerRabin, 0.49, 32);
+    });
+
+    checkThrows("RSA: probability 1.0 throws", [] {
+        RSAService rsa(TestType::MillerRabin, 1.0, 32);
+    });
+
+    checkThrows("RSA: probability above 1.0 throws", [] {
+        RSAService rsa(TestType::MillerRabin, 1.1, 32);
+    });
+
+    // 3. Проверка битовой длины
+    checkConstructs("RSA: bit length 16 is accepted", [] {
+        RSAService rsa(TestType::MillerRabin, 0.999, 16);
+    });
+
+    checkThrows("RSA: bit length below 16 throws", [] {
+        RSAService rsa(TestType::MillerRabin, 0.999, 15);
+    });
+
+    // 4. Проверка недопустимого типа теста
+    checkThrows("RSA: invalid test type throws", [] {
+        RSAService rsa(static_cast<TestType>(-1), 0.999, 32);
+    });
+
+    // 5. Генерация ключей
+    RSAService rsa(TestType::MillerRabin, 0.999, 32);
+    RSAKeyPair keyPair = rsa.generateKeyPair();
+
+    check("RSA: modulus is positive", keyPair.n > 0);
+    check("RSA: public exponent is 65537", keyPair.e == 65537);
+    check("RSA: private exponent is positive", keyPair.d > 0);
+    check("RSA: private exponent is less than modulus",
+        keyPair.d < keyPair.n);
+
+    // 6. Шифрование и дешифрование граничных значений
+    check("RSA: encrypt zero", rsa.encrypt(0, keyPair) == 0);
+    check("RSA: decrypt zero", rsa.decrypt(0, keyPair) == 0);
+    check("RSA: encrypt one", rsa.encrypt(1, keyPair) == 1);
+    check("RSA: decrypt one", rsa.decrypt(1, keyPair) == 1);
+
+    // 7. Проверка разных сообщений
+    BigInteger messages[] = {2, 42, 12345, 65536, 1000000};
+    bool allRestored = true;
+
+    for (const BigInteger& message : messages) {
+        if (message >= keyPair.n) {
+            allRestored = false;
+            break;
+        }
+
+        BigInteger ciphertext = rsa.encrypt(message, keyPair);
+        BigInteger decrypted = rsa.decrypt(ciphertext, keyPair);
+
+        if (decrypted != message) {
+            allRestored = false;
+            break;
+        }
+    }
+
+    check("RSA: all messages restored", allRestored);
+
+    // 8. Максимальное допустимое сообщение
+    BigInteger maxMessage = keyPair.n - 1;
+    BigInteger maxCiphertext = rsa.encrypt(maxMessage, keyPair);
+
+    check("RSA: ciphertext is in valid range",
+        maxCiphertext >= 0 && maxCiphertext < keyPair.n);
+    check("RSA: decrypt n - 1",
+        rsa.decrypt(maxCiphertext, keyPair) == maxMessage);
+
+    // 9. Проверка некорректных сообщений
+    checkThrows("RSA: negative message throws", [&] {
+        rsa.encrypt(-1, keyPair);
+    });
+
+    checkThrows("RSA: message equal to n throws", [&] {
+        rsa.encrypt(keyPair.n, keyPair);
+    });
+
+    checkThrows("RSA: message greater than n throws", [&] {
+        rsa.encrypt(keyPair.n + 1, keyPair);
+    });
+
+    checkThrows("RSA: negative ciphertext throws", [&] {
+        rsa.decrypt(-1, keyPair);
+    });
+
+    checkThrows("RSA: ciphertext equal to n throws", [&] {
+        rsa.decrypt(keyPair.n, keyPair);
+    });
+
+    checkThrows("RSA: ciphertext greater than n throws", [&] {
+        rsa.decrypt(keyPair.n + 1, keyPair);
+    });
+
+    // 10. Повторная генерация ключей
+    RSAKeyPair secondKeyPair = rsa.generateKeyPair();
+
+    check("RSA: second key pair has positive modulus",
+        secondKeyPair.n > 0);
+    check("RSA: second key pair has public exponent 65537",
+        secondKeyPair.e == 65537);
+
+    BigInteger secondMessage = 54321;
+    BigInteger secondCiphertext =
+        rsa.encrypt(secondMessage, secondKeyPair);
+
+    check("RSA: second key pair encrypts and decrypts",
+        rsa.decrypt(secondCiphertext, secondKeyPair) == secondMessage);
+}
+
 
 int main() {
     testEuclideanGcd();
@@ -675,6 +821,7 @@ int main() {
 
     testNumberTheoryService();
     testProbabilisticPrimalityTests();
+    testRSAService();
 
     std::cout << "\nPassed: " << passed << '\n';
     std::cout << "Failed: " << failed << '\n';
