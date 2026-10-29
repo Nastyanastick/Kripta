@@ -12,6 +12,9 @@
 #include "../include/primality/SolovayStrassenPrimalityTest.h"
 #include "../include/primality/MillerRabinPrimalityTest.h"
 #include "../include/rsa/RSAService.h"
+#include "../include/rsa/WienerAttackService.h"
+#include "../include/rsa/VulnerableRSAKeyGenerator.h"
+#include "../include/rsa/VulnerableRSAKeyGenerator.h"
 
 #include <iostream>
 #include <string>
@@ -808,6 +811,52 @@ void testRSAService() {
         rsa.decrypt(secondCiphertext, secondKeyPair) == secondMessage);
 }
 
+void testWienerAttackService() {
+    std::cout << "\n--- Wiener Attack Tests ---\n";
+
+    // Известная уязвимая RSA-пара: p = 53, q = 59, d = 3
+    // n = 3127, phi(n) = 3016, e = 2011
+    WienerAttackResult result = WienerAttackService::attack(3127, 2011);
+
+    check("Wiener: attack succeeds", result.success);
+    check("Wiener: private exponent recovered", result.privateExponent == 3);
+    check("Wiener: Euler function recovered", result.eulerFunction == 3016);
+    check("Wiener: convergents are collected", !result.convergents.empty());
+
+    checkThrows("Wiener: zero modulus throws", [] {
+        WienerAttackService::attack(0, 3);
+    });
+
+    checkThrows("Wiener: negative modulus throws", [] {
+        WienerAttackService::attack(-15, 7);
+    });
+
+    checkThrows("Wiener: zero public exponent throws", [] {
+        WienerAttackService::attack(15, 0);
+    });
+
+    // 3. Проверка генератора уязвимых ключей
+    WienerVulnerableKeyGenerator generator(RSAService::PrimalityTestType::MillerRabin, 0.999999);
+
+    for (int i = 1; i <= 5; ++i) {
+        RSAKeyPair keyPair = generator.generate(16);
+        WienerAttackResult attackResult =
+            WienerAttackService::attack(keyPair.n, keyPair.e);
+
+        std::string testName = "Wiener generated key " + std::to_string(i);
+
+        check(testName + ": attack succeeds", attackResult.success);
+
+        if (attackResult.success) {
+            check(testName + ": private exponent recovered",
+                attackResult.privateExponent == keyPair.d);
+
+            check(testName + ": Euler function recovered",
+                keyPair.e * keyPair.d % attackResult.eulerFunction == 1);
+        }
+    }
+}
+
 
 int main() {
     testEuclideanGcd();
@@ -822,6 +871,7 @@ int main() {
     testNumberTheoryService();
     testProbabilisticPrimalityTests();
     testRSAService();
+    testWienerAttackService();
 
     std::cout << "\nPassed: " << passed << '\n';
     std::cout << "Failed: " << failed << '\n';
