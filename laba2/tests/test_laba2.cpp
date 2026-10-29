@@ -8,9 +8,13 @@
 #include "../include/algorithms/EulerFunction.h"
 #include "../include/algorithms/CarmichaelFunction.h"
 #include "../include/NumberTheoryService.h"
+#include "../include/primality/FermatPrimalityTest.h"
+#include "../include/primality/SolovayStrassenPrimalityTest.h"
+#include "../include/primality/MillerRabinPrimalityTest.h"
 
 #include <iostream>
 #include <string>
+#include <limits>
 
 int passed = 0;
 int failed = 0;
@@ -577,6 +581,88 @@ void testNumberTheoryService() {
         });
 }
 
+
+void testOnePrimalityAlgorithm(const std::string& algorithmName, IProbabilisticPrimalityTest& test) {
+    const double probability = 0.999999;
+
+    // Простые числа
+    check(algorithmName + ": prime 2", test.IsProbablyPrime(2, probability));
+    check(algorithmName + ": prime 3", test.IsProbablyPrime(3, probability));
+    check(algorithmName + ": prime 5", test.IsProbablyPrime(5, probability));
+    check(algorithmName + ": prime 97", test.IsProbablyPrime(97, probability));
+    check(algorithmName + ": large prime 104729", test.IsProbablyPrime(104729, probability));
+
+    // Числа меньше двух
+    check(algorithmName + ": negative number", !test.IsProbablyPrime(-7, probability));
+    check(algorithmName + ": zero", !test.IsProbablyPrime(0, probability));
+    check(algorithmName + ": one", !test.IsProbablyPrime(1, probability));
+
+    // Чётные составные числа
+    check(algorithmName + ": even composite 4", !test.IsProbablyPrime(4, probability));
+    check(algorithmName + ": even composite 100", !test.IsProbablyPrime(100, probability));
+
+    // Нечётные составные числа
+    check(algorithmName + ": odd composite 9", !test.IsProbablyPrime(9, probability));
+    check(algorithmName + ": odd composite 15", !test.IsProbablyPrime(15, probability));
+    check(algorithmName + ": odd composite 25", !test.IsProbablyPrime(25, probability));
+    check(algorithmName + ": odd composite 49", !test.IsProbablyPrime(49, probability));
+    check(algorithmName + ": odd composite 65", !test.IsProbablyPrime(65, probability));
+
+    // Граничное допустимое значение вероятности
+    check(algorithmName + ": minimum probability 0.5", test.IsProbablyPrime(97, 0.5));
+
+    // Недопустимые значения вероятности
+    checkThrows(algorithmName + ": probability below 0.5 throws", [&test] {
+        test.IsProbablyPrime(97, 0.49);
+    });
+
+    checkThrows(algorithmName + ": probability 1.0 throws", [&test] {
+        test.IsProbablyPrime(97, 1.0);
+    });
+
+    checkThrows(algorithmName + ": probability above 1.0 throws", [&test] {
+        test.IsProbablyPrime(97, 1.1);
+    });
+
+    checkThrows(algorithmName + ": negative probability throws", [&test] {
+        test.IsProbablyPrime(97, -1.0);
+    });
+
+    checkThrows(algorithmName + ": NaN probability throws", [&test] {
+        test.IsProbablyPrime(97, std::numeric_limits<double>::quiet_NaN());
+    });
+
+    checkThrows(algorithmName + ": infinite probability throws", [&test] {
+        test.IsProbablyPrime(97, std::numeric_limits<double>::infinity());
+    });
+}
+
+void testProbabilisticPrimalityTests() {
+    std::cout << "\n--- Probabilistic Primality Tests ---\n";
+
+    FermatPrimalityTest fermat;
+    SolovayStrassenPrimalityTest solovayStrassen;
+    MillerRabinPrimalityTest millerRabin;
+
+    testOnePrimalityAlgorithm("Fermat", fermat);
+    testOnePrimalityAlgorithm("Solovay-Strassen", solovayStrassen);
+    testOnePrimalityAlgorithm("Miller-Rabin", millerRabin);
+
+    // Диагностика ограничения теста Ферма на числе Кармайкла 561.
+    int fermatAccepted561 = 0;
+
+    for (int i = 0; i < 20; ++i) {
+        if (fermat.IsProbablyPrime(561, 0.5)) {
+            ++fermatAccepted561;
+        }
+    }
+
+    std::cout << "[INFO] Fermat accepted 561 in "
+              << fermatAccepted561
+              << "/20 runs (diagnostic only)\n";
+}
+
+
 int main() {
     testEuclideanGcd();
     testExtendedEuclideanGcd();
@@ -588,6 +674,7 @@ int main() {
     testCarmichaelFunction();
 
     testNumberTheoryService();
+    testProbabilisticPrimalityTests();
 
     std::cout << "\nPassed: " << passed << '\n';
     std::cout << "Failed: " << failed << '\n';
