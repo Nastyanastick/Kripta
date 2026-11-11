@@ -851,6 +851,16 @@ void testWienerAttackService() {
             check(testName + ": private exponent recovered",
                 attackResult.privateExponent == keyPair.d);
 
+            BigInteger p = 2;
+            while (p * p <= keyPair.n && keyPair.n % p != 0) {
+                p++;
+            }
+            BigInteger q = keyPair.n / p;
+            BigInteger expectedPhi = (p - 1) * (q - 1);
+
+            check(testName + ": Euler function recovered correctly",
+                attackResult.eulerFunction == expectedPhi);
+
             check(testName + ": Euler function recovered",
                 keyPair.e * keyPair.d % attackResult.eulerFunction == 1);
         }

@@ -1,4 +1,3 @@
-
 #include "../../include/primality/ProbabilisticPrimalityTestBase.h"
 
 #include <cmath>
