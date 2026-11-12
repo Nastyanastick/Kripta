@@ -1,3 +1,5 @@
+#pragma once
+
 
 enum struct Error {
     ERROR_DIVIDE_0,
@@ -6,4 +8,7 @@ enum struct Error {
     ERROR_NO_INVERSE,
     ERROR_ZERO_POLYNOMIAL,
     ERROR_INVALID_POLYNOMIAL,
+    INVALID_BLOCK_SIZE,
+    INVALID_KEY_SIZE,
+    ERROR_INVALID_KEY,
 };

@@ -5,7 +5,7 @@
 #include <vector>
 
 
-using type = std::uint8_t;
+using type_8 = std::uint8_t;
 using type_64 = std::uint64_t;
 using big_type = boost::multiprecision::cpp_int;
 using BigPolynomial = std::vector<big_type>;    // от младшей к старшей
@@ -134,10 +134,10 @@ private:
     static big_type InverseFieldElement(big_type a, big_type fieldModulus);
     static DivisionResult<BigPolynomial> DivideFieldPolynomials(BigPolynomial a, BigPolynomial b, big_type fieldModulus);
 public:
-    static type AddPolynomial (type a, type b);
-    static type MultiplyPolynomial (type a, type b, type mod);
-    static type InversePolynomial(type a, type mod);
-    static bool IsIrreducible(type polynomial);
-    static std::vector<type> GenerateAllIrreduciblePolynomials();
+    static type_8 AddPolynomial ( type_8  a, type_8 b);
+    static type_8 MultiplyPolynomial ( type_8  a, type_8 b, type_8 mod);
+    static type_8 InversePolynomial( type_8  a, type_8 mod);
+    static bool IsIrreducible( type_8  polynomial);
+    static std::vector< type_8 > GenerateAllIrreduciblePolynomials();
     static std::vector<BigPolynomial> FactorizePolynomial(big_type polynomial, big_type fieldModulus);
 };

@@ -44,13 +44,13 @@ DivisionResult<BigPolynomial> PolynomialArithmetic::DivideFieldPolynomials(BigPo
     return {q, r};
 }
 
-type PolynomialArithmetic::AddPolynomial (type a, type b) {
+type_8  PolynomialArithmetic::AddPolynomial(type_8 a, type_8 b) {
     return a ^ b;
 }
 
-type PolynomialArithmetic::MultiplyPolynomial (type a, type b, type mod) {
+type_8 PolynomialArithmetic::MultiplyPolynomial(type_8 a, type_8 b, type_8 mod) {
     if (!IsIrreducible(mod)) throw Error::ERROR_REDUCIBLE_MODULUS;
-    type result = 0;
+    type_8 result = 0;
     while (b != 0) {
         if (b & 1) result ^= a;
         bool carry = a & 0x80;  // 10000000
@@ -61,7 +61,7 @@ type PolynomialArithmetic::MultiplyPolynomial (type a, type b, type mod) {
     return result;
 }
 
-type PolynomialArithmetic::InversePolynomial(type a, type mod){
+type_8 PolynomialArithmetic::InversePolynomial(type_8 a, type_8 mod){
     if (a == 0) throw Error::ERROR_ZERO_HAS_NO_INVERSE;
     if (!IsIrreducible(mod)) throw Error::ERROR_REDUCIBLE_MODULUS;
     type_64 fullMod = (type_64(1) << 8) | mod;  // 8 степень теперь записана единицей
@@ -70,7 +70,7 @@ type PolynomialArithmetic::InversePolynomial(type a, type mod){
     return DividePolynomial(result.x, fullMod).r;
 }
 
-bool PolynomialArithmetic::IsIrreducible(type polynomial) {
+bool PolynomialArithmetic::IsIrreducible(type_8 polynomial) {
     type_64 fullPolynomial = (type_64(1) << 8) | polynomial;
     std::vector<type_64> divisors = GenerateIrreduciblePolynomials<type_64>(4);
     for (int i = 0; i < divisors.size(); i++) {
@@ -79,8 +79,8 @@ bool PolynomialArithmetic::IsIrreducible(type polynomial) {
     return true;
 }
 
-std::vector<type> PolynomialArithmetic::GenerateAllIrreduciblePolynomials() {
-    std::vector<type> result;
+std::vector<type_8> PolynomialArithmetic::GenerateAllIrreduciblePolynomials() {
+    std::vector<type_8> result;
     for (int i = 0; i <= 255; i++) {
         bool IsIrr = IsIrreducible(i);
         if (IsIrr) result.push_back(i);
